@@ -1,0 +1,23 @@
+{
+  "run_date": "2026-09-10T03:38:05.363357+00:00",
+  "total_rows": 30000,
+  "reason_code_counts": {
+    "ctr_below_tier_visible": 8476,
+    "possible_tracking_gap": 2538,
+    "page_one_decay_risk": 13,
+    "ctr_below_tier_visible_and_decay_risk": 2
+  },
+  "tier_avg_ctr": {
+    "deep": 0.055,
+    "page_1": 0.355,
+    "page_3_5": 0.142,
+    "striking": 0.256,
+    "top_3": 0.334
+  },
+  "impressions_90d_median": 731.0,
+  "content_type_share": {
+    "keyword article": 0.907,
+    "feedly article": 0.07,
+    "comparison article": 0.023
+  }
+}
