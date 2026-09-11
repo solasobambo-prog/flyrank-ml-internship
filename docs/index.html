@@ -342,12 +342,16 @@
   <section id="introduction">
     <h2><span class="num">01</span> Introduction</h2>
     <p>
-      A page can rank well and still underperform. It can sit on page one of search results,
-      earn real impressions, and still capture far fewer clicks than other pages in the same
-      position, a signal that something about how it presents itself, its title, its
+      FlyRank works with dozens of clients on their search performance, and across the 32
+      pseudonymized clients in this dataset, roughly 28% of visible pages show a genuine CTR
+      gap, a page ranking well but under capturing clicks relative to others at the same
+      position. A page can rank well and still underperform. It can sit on page one of search
+      results, earn real impressions, and still capture far fewer clicks than other pages in the
+      same position, a signal that something about how it presents itself, its title, its
       description, its snippet, isn't earning the click its ranking has already won. For a
-      content team managing hundreds or thousands of pages, the question isn't whether this
-      happens, it's which pages it's happening to, and which of those deserve attention first.
+      content team managing hundreds or thousands of pages across dozens of clients, the
+      question isn't whether this happens, it's which pages it's happening to, and which of
+      those deserve attention first.
     </p>
     <p>
       This is a decision problem, not a curiosity. A content editor or SEO reviewer has limited
@@ -365,12 +369,18 @@
       This project builds that tool on FlyRank's anonymized search performance data: a rule that
       compares each page's click through rate only to its own position tier's average, splits
       flagged pages into three distinct categories based on likely cause, and ranks each
-      category by a dampened estimate of opportunity rather than raw traffic size alone. A
-      machine learning alternative was tested and honestly rejected, not because modeling failed
-      as an idea, but because it failed its own validation on this data, a finding treated as
-      informative rather than as a setback to hide. What follows documents the data, the method,
-      the validation, the honest limitations, and the resulting ranked recommendations, built to
-      be reviewed by a human, not to replace one.
+      category by a dampened estimate of opportunity rather than raw traffic size alone. The
+      core metric, the gap between a page's actual CTR and its tier's average CTR, is built from
+      two numbers that already exist in the data today, grounded in what's already observed, not
+      a forecast of something that hasn't happened yet. There's also no ground truth "this really
+      was an opportunity" label to check the ranking against, so success here means something
+      different than it would for a task with a known right answer: whether the ranking surfaces
+      real, trustworthy variation worth a human's time, not a precision score against a label
+      that doesn't exist. A machine learning alternative was tested anyway and honestly rejected,
+      not because modeling failed as an idea, but because it failed its own validation on this
+      data, a finding treated as informative rather than as a setback to hide. What follows
+      documents the data, the method, the validation, the honest limitations, and the resulting
+      ranked recommendations, built to be reviewed by a human, not to replace one.
     </p>
   </section>
 
