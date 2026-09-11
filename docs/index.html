@@ -1,0 +1,129 @@
+CTR / Engagement Opportunity Scoring · FlyRank ML Internship Capstone
+
+Which pages are under-capturing clicks, and which of those deserve a review first?
+Adesola · Search Intelligence, Lane 4
+
+Abstract
+Which visible pages on a content site are under capturing clicks relative to how well they already rank, and which of those deserve a content editor's attention first? This project builds a tier adjusted CTR gap rule on FlyRank's anonymized search performance data, comparing each page's click through rate only to others at the same position tier, then splits flagged pages into three archetypes, a genuine CTR gap, a likely tracking anomaly, and page one content that has gone stale, each routed to a different owner. A machine learning model was also tested as an alternative to the rule and honestly failed its own validation (a negative R² under a client grouped split), confirming the simpler, transparent rule as the right choice for this data rather than a fallback. The final ranked queue flags 36.8% of visible pages across the three archetypes, with a volume dampened ranking that materially changed which pages rank highest compared to a naive volume times gap score. This is a decision support tool for content editors and SEO reviewers, not a causal claim about what drives clicks or how search ranking works.
+
+01
+Introduction
+A page can rank well and still underperform. It can sit on page one of search results, earn real impressions, and still capture far fewer clicks than other pages in the same position, a signal that something about how it presents itself, its title, its description, its snippet, isn't earning the click its ranking has already won. For a content team managing hundreds or thousands of pages, the question isn't whether this happens, it's which pages it's happening to, and which of those deserve attention first.
+
+This is a decision problem, not a curiosity. A content editor or SEO reviewer has limited hours and a long list of pages that could plausibly use a look. Reviewing a page that didn't need it wastes that time. Missing a page that did need it means a click through rate gap keeps costing traffic, unnoticed, for another review cycle. The right tool for this decision has to do three things a simple gut check can't: account for the fact that expected click through rate varies enormously by how well a page already ranks (a page on page one should expect roughly 6× the click through rate of a page buried on page three), separate a genuine content problem from a tracking or instrumentation problem that looks identical in the raw numbers, and rank the result by how much a fix is actually worth, not just by how many people saw the page.
+
+This project builds that tool on FlyRank's anonymized search performance data: a rule that compares each page's click through rate only to its own position tier's average, splits flagged pages into three distinct categories based on likely cause, and ranks each category by a dampened estimate of opportunity rather than raw traffic size alone. A machine learning alternative was tested and honestly rejected, not because modeling failed as an idea, but because it failed its own validation on this data, a finding treated as informative rather than as a setback to hide. What follows documents the data, the method, the validation, the honest limitations, and the resulting ranked recommendations, built to be reviewed by a human, not to replace one.
+
+02
+Data
+This work uses FlyRank's anonymized starter dataset, one row per content page, 30,000 rows, 44 columns, spanning 32 pseudonymized clients, with all metrics aggregated over a trailing 90 day window. No client names, domains, URLs, raw search queries, or credentials appear anywhere; content and client identifiers are pseudonymous and used only for grouping.
+
+Pages with fewer than 500 impressions in the window were excluded from the ranked queue as too low volume to trust, though they remain visible elsewhere in the dataset. Two columns, trend_direction and trend_pct, were excluded from every stage of this project as features, since the dataset's own documentation flags them as the direct source of a label used elsewhere in the internship, using them as inputs would be circular.
+
+A larger warehouse release (roughly 79 million daily performance rows) exists and was not required for this lane; the starter slice already provided sufficient volume for a valid, reproducible result.
+
+03
+Methodology
+Label
+Since no outcome label exists in this data, FlyRank doesn't record "this page underperformed", a proxy was constructed: ctr_gap, a page's click-through rate minus the average CTR for pages at the same search position tier, computed only for pages with enough impressions (100+ in the trailing 90 day window) to trust the comparison.
+
+Baseline
+A transparent rule flags a page when its CTR sits below its own tier's average, weighted by traffic volume. This isn't a fallback, it's the method this project ultimately ships, chosen because it beat every model alternative tested.
+
+Model attempt and validation design
+A Random Forest and a Linear Regression were trained to predict ctr_gap from content and keyword characteristics (content type, search intent, freshness, age, search volume, competition, cost-per-click, word count), features confirmed independent of the label itself. Models were evaluated with a client-grouped split (80/20), never a random row split, since pages from the same client share editorial patterns that a random split would let a model memorize rather than generalize from.
+
+Leakage checks
+Three separate, deliberate leakage tests were run:
+
+Adding the click-through rate itself as a "feature" produced a perfect but meaningless R² of 1.000, versus an honest 0.002 without it, confirming a suspiciously good score is a warning sign, not a win.
+Comparing a naive random split against the honest grouped split on the same model showed the random split produced misleadingly positive results (R² of 0.04 to 0.09) purely because most clients leaked across train and test, while the honest split revealed the true, negative result.
+Deliberately reintroducing a known leaky feature into the otherwise honest pipeline pushed R² from −1.57 up to 0.92, confirming the evaluation method correctly detects a real leak when one exists, so the negative results elsewhere reflect a real finding, not a broken test.
+Result and root cause
+Neither model beat the baseline rule, and both scored worse than simply predicting the training average. Root-cause analysis traced most of the Random Forest's error to a single outlier client whose behavior didn't resemble any other client in the dataset; removing that one client from training brought the score close to the trivial baseline, confirming the model had memorized one client's noise rather than learned a generalizable pattern.
+
+Conclusion. Content and keyword metadata do not meaningfully explain this CTR gap in this dataset. The rule-based baseline was kept and refined into three distinct categories of flagged pages, a genuine CTR gap, a likely tracking issue, and stale page-one content, each validated independently before being combined into the final ranked recommendation queue.
+04
+Results (vs. baseline)
+Comparison 1 — model vs. baseline
+Same client-grouped test split, predicting ctr_gap:
+
+Model	R² (test)	MAE (test)
+Baseline rule	0.0000	n/a
+DummyRegressor (train mean)	−0.0143	0.2192
+Linear Regression	−0.5398	0.2713
+Random Forest (depth=6)	−1.5655	0.3087
+Bar chart showing the baseline rule at 0.0 R-squared in green, and three tested alternatives all scoring negative R-squared in red, with Random Forest performing worst at -1.5655.
+No tested model beat the baseline rule; the Random Forest performed worst of all.
+Comparison 2 — naive rule vs. refined rule
+Same 30,000-row dataset, ranking the same underlying population:
+
+Naive rule	Refined rule
+Total flagged	11,016 (36.7%)	11,029 (36.8%)
+Ranking method	impressions × gap	gap × log(impressions)
+Top 10 overlap after the fix	—	3 of 10 unchanged
+The refined rule doesn't flag a different population, the same pages are still the ones worth reviewing, but it ranks them in a materially different order: 7 of the old top 10 were volume-driven artifacts, not genuine large gaps. The clearest case: a page with over half a million impressions but only a 0.10 CTR gap had ranked #1 under the original score purely because of its audience size. Under the refined ranking, it's gone entirely.
+
+Scatter plot of impressions versus CTR gap, with markers showing which pages moved in and out of the top 10 ranking after switching to a volume-dampened score. Only 3 of 10 rows remained the same.
+Only 3 of the original top 10 pages survived the switch to a volume-dampened ranking.
+05
+Limitations & honest framing
+This work is decision support for content editors, SEO reviewers, and, where a tracking anomaly is flagged, engineering, not a tool for automated publishing, grading contributors, or promising a client a specific recovery.
+
+The findings come from a 30,000 row anonymized sample across 32 clients, a trailing 90-day snapshot, not FlyRank's full inventory. The core metric, a page's CTR gap against its position tier's average, is a constructed proxy rather than an outcome FlyRank measures directly, and that average is a snapshot of this sample, not a fixed constant. Several model features had meaningful missing data (up to 26% for word count), imputed rather than discarded, a real source of noise layered on top of an already negative modeling result.
+
+Two of the three page archetypes carry known, disclosed weaknesses: the CTR-gap category structurally under-covers pages already ranking in the very top positions, and the stale-content category, after requiring genuine staleness on two separate measures, has only 15 qualifying pages, all sharing the same content type and position tier, too small and too confounded to treat as a stable pattern rather than a starting point for a closer look.
+
+No causal claim, and no claim about Google's ranking algorithm. Every recommendation in this queue points at a page worth reviewing, not a diagnosis, a guaranteed fix, or a claim about why a page ranks where it does. This project makes no attempt to model or explain Google's ranking algorithm, and no result here should be read as evidence that any specific action will cause a measurable change in performance.
+06
+Ranked recommendations
+The output is a ranked queue of pages worth a human look, split into three categories, each with a different owner.
+
+Archetype	Signal	Action	Owner
+CTR gap, real	Visible, CTR below tier average	Review title, meta, snippet	Content editor / SEO
+Tracking gap suspect	Visible, zero CTR	Verify tracking setup	Engineering / analytics
+Page-one decay risk	Old, stale, page one (n=15)	Schedule content refresh	Content strategy
+Bar chart of the number of pages flagged under each of the four reason codes, dominated by the CTR gap archetype at 8,476 rows, with the tracking gap archetype at 2,538, and the two decay-related archetypes at 13 and 2 rows respectively.
+Rows flagged per archetype. The decay-risk archetypes are real but small (15 rows combined) and disclosed as such.
+What should never be automated
+Auto-editing or auto-publishing titles, meta descriptions, snippets, or content.
+Treating a flag as a performance review of a writer or editor.
+A client-facing promise built on the estimated impact figure, a sizing estimate, not a tested recovery number.
+Reintroducing the failed model as a confidence weight on top of the rule.
+Routing tracking-gap rows to content editors by default; they belong with engineering first.
+Collapsing the three reason codes into one blended score, the split exists because each implies a different owner and a different check.
+Human review before acting
+Confirm impressions still clear the archetype's floor against current data, not the snapshot this queue was built from.
+Confirm a zero-CTR flag in the actual analytics account before looping in content.
+Check days since last update before queuing a refresh a page may have already received.
+Review the 15 decay-risk rows individually, given the small sample, rather than trusting the count as a pattern.
+Monitoring / retrain triggers
+A shift in the reason-code mix, especially a rising tracking-gap share.
+Tier-average CTR drift as search behavior changes over time.
+A content-type mix shift, given how concentrated one content type already is in this dataset.
+A materially larger, more diverse dataset, the only condition worth revisiting the abandoned model approach.
+07
+Reproducibility
+Repository: github.com/solasobambo-prog/flyrank-ml-internship
+
+Claim	Notebook
+Research question, decision framing	w01_research_question.ipynb
+Leakage sanity check (R² 0.002 vs. 1.000)	w03_data_contract.ipynb
+Baseline rule, original weak-pick problem	w04_baseline_score.ipynb
+Model attempt, grouped split, root-cause ablation	w05_model.ipynb
+Naive vs. grouped split, harness verification	w06_validation_audit.ipynb
+Final ranked recommendations, three archetypes	w07_action_playbook.ipynb
+This paper's sections and embedded artifacts	capstone.ipynb
+To rerun: clone the repository, open any notebook in Google Colab (each has an "Open in Colab" badge), and run all cells top to bottom. Every notebook re-clones the repository if needed and reads directly from data/raw/content_refresh_anonymized.csv, no manual setup beyond that.
+
+All model training and splitting uses random_state=42, so results are exact and reproducible on a fresh run, not just directionally similar. The ranked queue CSV is excluded from the repository by design (a CI leak guard) and regenerates automatically from w07_action_playbook.ipynb; a committed monitoring baseline JSON serves as the metrics receipt a future run can check its own numbers against.
+
+08
+Acknowledgments & data credit
+This project was built as part of the FlyRank ML Internship track. All search performance data used here comes from FlyRank's anonymized internship dataset, real production search data, pseudonymized and prepared for learning purposes.
+
+Built on the FlyRank ML Internship dataset.
+
+Thanks to the FlyRank team for structuring a track that asked for honest negative results as much as positive ones, and for making a real, gated warehouse release available rather than a toy dataset.
+
+Adesola · FlyRank ML Internship, Search Intelligence · 2026
