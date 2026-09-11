@@ -1,1 +1,1 @@
-PASTE-YOUR-DEPLOYED-PAPER-URL-HERE
+https://adesola-ctr-study-flyrank-ml.netlify.app/
