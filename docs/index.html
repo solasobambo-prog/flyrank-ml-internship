@@ -164,26 +164,29 @@
   @media (max-width: 880px) {
     .paper-shell { display: block; }
     .section-nav {
-      position: relative;
-      top: auto;
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      padding: 0 0 16px;
-      margin-bottom: 28px;
-      border-bottom: 1px solid var(--rule);
-    }
-    .section-nav .nav-label { display: none; }
-    .section-nav a {
-      flex: 0 0 auto;
-      padding: 6px 10px;
-      border: 1px solid var(--rule);
+      position: fixed;
+      top: 16px;
+      left: 12px;
+      width: 138px;
+      max-height: 72vh;
+      overflow-y: auto;
       background: var(--paper-raised);
-      font-size: 0.72rem;
-      white-space: nowrap;
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      padding: 12px 12px 10px;
+      z-index: 40;
+      box-shadow: 0 6px 18px rgba(33, 38, 43, 0.14);
+      transform: translateX(0);
+      opacity: 1;
+      transition: transform 0.25s ease, opacity 0.25s ease;
     }
-    .section-nav a:hover,
-    .section-nav a.active { border-color: var(--pine); color: var(--pine); font-weight: 600; }
+    .section-nav.nav-hidden {
+      transform: translateX(-150%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .section-nav .nav-label { font-size: 0.62rem; margin-bottom: 8px; }
+    .section-nav a { font-size: 0.76rem; padding: 5px 0 5px 10px; }
   }
 
   section {
@@ -302,8 +305,9 @@
       <div><div class="stat-label">Dataset</div><div class="stat-value">30,000 rows</div></div>
       <div><div class="stat-label">Clients</div><div class="stat-value">32 pseudonymized</div></div>
       <div><div class="stat-label">Flagged</div><div class="stat-value">36.8% of pages</div></div>
-      <div><div class="stat-label">Best model R&sup2;</div><div class="stat-value">&minus;1.5655</div></div>
+      <div><div class="stat-label">Random Forest R&sup2;</div><div class="stat-value">&minus;1.5655</div></div>
       <div><div class="stat-label">Read time</div><div class="stat-value">~12 min</div></div>
+      <div><div class="stat-label">Archetypes</div><div class="stat-value">3</div></div>
     </div>
 
     <div class="abstract">
@@ -604,6 +608,7 @@
       <thead><tr><th>Claim</th><th>Notebook</th></tr></thead>
       <tbody>
         <tr><td>Research question, decision framing</td><td><code>w01_research_question.ipynb</code></td></tr>
+        <tr><td>Task framing: label definition, task type, success metric</td><td><code>w02_ml_task_framing.ipynb</code></td></tr>
         <tr><td>Leakage sanity check (R&sup2; 0.002 vs. 1.000)</td><td><code>w03_data_contract.ipynb</code></td></tr>
         <tr><td>Baseline rule, original weak-pick problem</td><td><code>w04_baseline_score.ipynb</code></td></tr>
         <tr><td>Model attempt, grouped split, root-cause ablation</td><td><code>w05_model.ipynb</code></td></tr>
@@ -684,6 +689,17 @@
     }, { rootMargin: '-18% 0px -68% 0px', threshold: 0 });
 
     sections.forEach(section => observer.observe(section));
+
+    let lastY = window.scrollY;
+    window.addEventListener('scroll', () => {
+      const y = window.scrollY;
+      if (y > lastY && y > 80) {
+        nav.classList.add('nav-hidden');
+      } else {
+        nav.classList.remove('nav-hidden');
+      }
+      lastY = y;
+    }, { passive: true });
   })();
 </script>
 </body>
